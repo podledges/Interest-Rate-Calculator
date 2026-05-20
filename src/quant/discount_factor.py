@@ -1,5 +1,5 @@
 import datetime
-# Absolute import from your project root
+
 from src.quant.day_counter import calculate_year_fraction
 
 
@@ -24,15 +24,15 @@ def calculate_df_from_dates(rate: float, start_date: datetime.date, end_date: da
     Integration: Bridges the calendar logic with the financial math.
     Automatically calculates the day count fraction and returns the discount factor.
     """
-    # 1. Get the exact fractional year from your day counter library
+    # 1. obtain fractional day count
     t = calculate_year_fraction(start_date, end_date, convention, frequency)
     
-    # 2. Feed that fraction into the pure discounting formula
+    # 2. pass it through the discount factor function
     return calculate_discount_factor(rate, time_fraction=t)
 
 
 
-# --- Execution and Proof Block ---
+# TESTING
 if __name__ == "__main__":
     print("--- Testing Integrated Discounting ---")
     

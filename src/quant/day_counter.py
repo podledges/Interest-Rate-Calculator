@@ -37,6 +37,8 @@ def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, 
     else:       # ERROR MSG
         raise ValueError(f"Unsupported day count convention: {convention}")
 
+
+
 if __name__ == "__main__":
     date_start = datetime.date(2024, 2, 15)
     date_end = datetime.date(2024, 3, 15)

@@ -1,7 +1,6 @@
 import datetime
 
-# --- 1. Import your quantitative tools ---
-# Adjust the 'src.quant' or 'src.engine' paths if you moved files around!
+# --- IMPORT FUNCTIONS ---
 from src.quant.day_counter import calculate_year_fraction
 from src.quant.discount_factor import calculate_discount_factor, calculate_df_from_dates
 from src.engine.schedule import generate_payment_schedule # (Assuming you put this in engine)
