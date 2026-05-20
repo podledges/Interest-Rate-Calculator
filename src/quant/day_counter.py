@@ -6,6 +6,7 @@ def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, 
     Calculates the fractional day count between two dates 
     based on 4 differents basis conventions. (ACT/365, ACT/360, 30/360, EQUAL).
     """
+
     convention = convention.upper().strip()
     
     if convention == "EQUAL":
@@ -36,9 +37,7 @@ def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, 
     else:       # ERROR MSG
         raise ValueError(f"Unsupported day count convention: {convention}")
 
-# RUNS only when called directly, not when imported as a module
 if __name__ == "__main__":
-    # Test dates crossing a leap year boundary
     date_start = datetime.date(2024, 2, 15)
     date_end = datetime.date(2024, 3, 15)
     
