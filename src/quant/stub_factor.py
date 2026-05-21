@@ -2,11 +2,11 @@ import datetime
 
 from src.quant.day_counter import calculate_year_fraction
 from src.quant.day_counter import calculate_time_passed
+from src.quant.discount_factor import calculate_discount_factor
 from typing import Optional
 
-def calculate_stub_rate(benchmark_rate: float, days: int, basis:str):
-    
-    return 1 + (benchmark_rate * days)
+#def calculate_stub_rate(benchmark_rate: float, days: int, basis:str):
+ ##  return 1 + (benchmark_rate * days)
 
 def interpolate_stub_rates_linearly(target_date: datetime.date, point1: tuple[datetime.date, float], 
                                     point2: tuple[datetime.date, float], basis: str, frequency: Optional[int] = None)-> float:
@@ -27,6 +27,17 @@ def interpolate_stub_rates_linearly(target_date: datetime.date, point1: tuple[da
     
     interpolated_rate = rate1 + (rate2 - rate1) * time_ratio
     return interpolated_rate
+
+def calculate_stub_present_value(notional:int, target_date: datetime.date, point1: tuple[datetime.date, float], 
+                                    point2: tuple[datetime.date, float], basis: str, frequency: Optional[int] = None):
+    
+    rate = interpolate_stub_rates_linearly(target_date, point1, point2, basis, frequency)
+    start_date, rate1 = point1
+    end_date, rate2 = point2
+    time_fraction = calculate_year_fraction(start_date,end_date,basis,frequency)
+    discount_rate = calculate_discount_factor(rate, time_fraction)
+    return discount_rate * notional
+ 
 
 if __name__ == "__main__":
     three_year_point = (datetime.date(2029, 5, 21), 0.0420)

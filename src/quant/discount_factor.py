@@ -31,14 +31,13 @@ def calculate_df_from_dates(rate: float, start_date: datetime.date, end_date: da
     return calculate_discount_factor(rate, time_fraction=t)
 
 
-
 # --- Execution and Proof Block ---
 if __name__ == "__main__":
     print("--- Testing Integrated Discounting ---")
     
-    test_rate = 0.094765
-    d_start = datetime.date(1990, 5, 17)
-    d_end = datetime.date(1990, 6, 17)
+    test_rate = 0.247
+    d_start = datetime.date(1991, 5, 1)
+    d_end = datetime.date(1993, 5, 1)
     
     try:
         # We can now just call the wrapper function directly
