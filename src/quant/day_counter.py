@@ -1,4 +1,5 @@
 import datetime
+import calendar
 from typing import Optional
 
 def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, convention: str, frequency: Optional[int] = None) -> float:
@@ -37,10 +38,46 @@ def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, 
     else:       # ERROR MSG
         raise ValueError(f"Unsupported day count convention: {convention}")
 
+
+
+def calculate_time_passed(date1:datetime.date, date2:datetime.date):
+    """
+    Returns years, months, and days between two dates.
+    Automatically determines which one is date1 and which is date2
+    """
+    if date1 > date2:
+        start_date = date2
+        end_date = date1
+    else:
+        start_date = date1
+        end_date = date2
+
+    years = end_date.year - start_date.year
+    months = end_date.month - start_date.month
+    days = end_date.day - start_date.day
+
+    if days < 0:
+        prev_month = end_date.month - 1 if end_date.month > 1 else 12
+        prev_year = end_date.year if end_date.month > 1 else end_date.year - 1
+        _, days_in_prev_month = calendar.monthrange(prev_year, prev_month)
+        
+        days += days_in_prev_month
+        months -= 1
+
+    if months < 0:
+        months += 12
+        years -= 1
+
+    return (years, months, days)
+
+
+
 if __name__ == "__main__":
     date_start = datetime.date(2024, 2, 15)
     date_end = datetime.date(2024, 3, 15)
     
+    years,months,days = calculate_time_passed(date_start,date_end)
+    print(f"Time passed: {years} years, {months} months, and {days} days.")    
     print("--- Testing Leap Year Intervals (Feb 15 to Mar 15, 2024) ---")
     
     # ACT/360 will naturally capture 29 days in the numerator
