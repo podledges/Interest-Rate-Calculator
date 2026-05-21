@@ -1,6 +1,6 @@
 def find_equivalent_annual_rate(rate: float, current_frequency: int, target_frequeny: int) -> float:
     """
-    convert an interest rate from one compounding frequency to another 
+    DECOMPOUNDING
     while keeping the actual annual yield (the effective return) exactly the same.
     """
 
