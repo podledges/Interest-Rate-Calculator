@@ -1,0 +1,6 @@
+{
+    "curve_name": "USD_OIS_Discount",
+    "trade_date": "2026-05-26",
+    "day_count_convention": "Actual/360",
+    "compounding_base": "continuous"
+}
