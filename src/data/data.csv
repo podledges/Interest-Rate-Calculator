@@ -1,0 +1,14 @@
+Instrument,Tenor,Rate
+Swap,O/N,0.1425
+Swap,1W,0.1475
+Swap,1M,0.1500
+Swap,2M,0.15125
+Swap,3M,0.1515625
+Swap,6M,0.15375
+Swap,1Y,0.1555
+Swap,2Y,0.1425
+Swap,3Y,0.1395
+Swap,4Y,0.1385
+Swap,5Y,0.1375
+Swap,7Y,0.1355
+Swap,10Y,0.1310

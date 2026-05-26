@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # Importing from your project structure
 from src.quant.day_counter import calculate_year_fraction
-from src.cubic_spline import CubicSplineInterpolator # Assuming this is your class name
+from src.cubic_spline import CubicSplineCurve 
 
 class CurveBuilder:
     def __init__(self, market_data_df, config):
@@ -13,7 +13,8 @@ class CurveBuilder:
         self.config = config
         
         # Parse global settings from JSON
-        self.trade_date = datetime.datetime.strptime(config['trade_date'], "%Y-%m-%d").date()
+        # FIXED: Format changed to %d-%m-%Y to match "17-05-1990" in config.json
+        self.trade_date = datetime.datetime.strptime(config['trade_date'], "%d-%m-%Y").date()
         self.convention = config['day_count_convention']
         self.freq = config['payment_frequency']
         self.interp_method = config['interpolation_method']
@@ -24,7 +25,7 @@ class CurveBuilder:
         """The main pipeline: Filter -> Interpolate Gaps -> Bootstrap."""
         swap_data = self.market_data[self.market_data['Instrument'] == 'Swap'].copy()
         
-        # 1. Convert string tenors (e.g., '5Y') to exact maturity dates and fractional years
+        # 1. Convert string tenors to exact maturity dates and fractional years
         swap_data['MaturityDate'] = swap_data['Tenor'].apply(self._tenor_to_date)
         swap_data['TimeInYears'] = swap_data['MaturityDate'].apply(
             lambda d: calculate_year_fraction(self.trade_date, d, self.convention)
@@ -48,13 +49,12 @@ class CurveBuilder:
         max_year = max(known_years)
         step = 1.0 / self.freq
         
-        # Create a perfectly spaced array of required payment times (e.g., [0.5, 1.0, 1.5, 2.0...])
         required_years = np.arange(step, max_year + step, step)
         
         if self.interp_method.lower() == 'cubic_spline':
-            # Utilize your custom module
-            spline = CubicSplineInterpolator(known_years, known_rates)
-            interpolated_rates = spline.interpolate(required_years)
+            spline = CubicSplineCurve(known_years, known_rates)
+            # FIXED: Called .evaluate() to match the CubicSplineCurve class definition
+            interpolated_rates = spline.evaluate(required_years)
         elif self.interp_method.lower() == 'linear':
             interpolated_rates = np.interp(required_years, known_years, known_rates)
         else:
@@ -65,7 +65,6 @@ class CurveBuilder:
     def _bootstrap_swap(self, time_in_years, par_rate):
         """
         Bootstraps a single swap rate assuming all prior zero rates are known.
-        Because of the pre-processing step, there are never missing data gaps here.
         """
         coupon_payment = par_rate / self.freq
         sum_of_prior_dfs = 0.0
@@ -90,16 +89,33 @@ class CurveBuilder:
         })
 
     def _tenor_to_date(self, tenor_str):
-        """Helper to convert '5Y' or '6M' into a datetime.date object."""
-        value = int(tenor_str[:-1])
-        unit = tenor_str[-1].upper()
+        """Helper to convert standard market strings ('5Y', '1W', 'O/N') into exact dates."""
+        tenor_str = tenor_str.upper().strip()
         
-        if unit == 'Y':
-            return self.trade_date + relativedelta(years=value)
-        elif unit == 'M':
-            return self.trade_date + relativedelta(months=value)
-        return self.trade_date
-
+        if tenor_str == 'O/N': 
+            return self.trade_date + relativedelta(days=1)
+        elif tenor_str == 'S/N' or tenor_str == 'SPOT': 
+            return self.trade_date + relativedelta(days=2)
+            
+        try:
+            value = int(tenor_str[:-1])
+            unit = tenor_str[-1]
+            
+            if unit == 'Y':
+                return self.trade_date + relativedelta(years=value)
+            elif unit == 'M':
+                return self.trade_date + relativedelta(months=value)
+            elif unit == 'W':
+                return self.trade_date + relativedelta(weeks=value)
+            elif unit == 'D':
+                return self.trade_date + relativedelta(days=value)
+            else:
+                raise ValueError(f"Unknown tenor unit: {unit}")
+                
+        except ValueError:
+            print(f"Error parsing tenor: {tenor_str}. Defaulting to trade date.")
+            return self.trade_date
+            
     def plot_curve(self):
         """Plots the calculated zero-coupon yield curve."""
         if not self.zero_rates:
@@ -107,7 +123,7 @@ class CurveBuilder:
             return
             
         times = [pt['time_in_years'] for pt in self.zero_rates]
-        rates = [pt['zero_rate'] * 100 for pt in self.zero_rates] # Convert to percentage
+        rates = [pt['zero_rate'] * 100 for pt in self.zero_rates] 
         
         plt.figure(figsize=(10, 6))
         plt.plot(times, rates, marker='o', linestyle='-', color='b', label='Zero Curve')

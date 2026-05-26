@@ -1,6 +1,7 @@
 {
-    "curve_name": "USD_OIS_Discount",
-    "trade_date": "2026-05-26",
+    "curve_name": "Standard_Swap",
+    "trade_date": "17-05-1990",
     "day_count_convention": "Actual/360",
-    "compounding_base": "continuous"
+    "payment_frequency": 1,
+    "interpolation_method": "cubic_spline"
 }
