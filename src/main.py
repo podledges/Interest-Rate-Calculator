@@ -5,6 +5,7 @@ from src.quant.discount_factor import calculate_discount_factor, calculate_df_fr
 from src.quant.stub_factor import interpolate_stub_rates_linearly, calculate_stub_present_value
 from src.quant.annuity import calculate_annuity_present_value
 def main():
+    print("Test Branch")
     print("=== SWAP CALCULATOR QUICK-TEST SANDBOX ===\n")
     
     # ---------------------------------------------------------
