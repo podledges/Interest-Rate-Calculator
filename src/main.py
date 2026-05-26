@@ -4,6 +4,7 @@ from src.quant.day_counter import calculate_year_fraction
 from src.quant.discount_factor import calculate_discount_factor, calculate_df_from_dates
 from src.quant.stub_factor import interpolate_stub_rates_linearly, calculate_stub_present_value
 from src.quant.annuity import calculate_annuity_present_value
+from src.quant.forward_rate import solve_forward_rate_variables
 def main():
     print("=== SWAP CALCULATOR QUICK-TEST SANDBOX ===\n")
     
@@ -45,7 +46,14 @@ def main():
     # ====================    DECOMPOUNDED RATE     ====================
     # new_rate = 
 
-
+    # ====================    FORWARD RATE VARIABLES ===================
+    #F1 = DISCOUNT factor at D1. 
+    answer = solve_forward_rate_variables(F1-None, 
+                                 F2- None,
+                                 forward_rate = None,
+                                 days= None,
+                                 basis = int)
+    print(answer)
 
     # ====================    STUB DATES   ====================
     #params: 
