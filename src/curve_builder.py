@@ -12,7 +12,7 @@ class CurveBuilder:
         
         self.trade_date = datetime.datetime.strptime(config['trade_date'], "%d-%m-%Y").date()
         self.convention = config['day_count_convention']
-        self.freq = config['payment_frequency']  # Assumed semi-annual (2) based on image
+        self.freq = config['payment_frequency'] 
         
         # We store the exact state maps indexed by time in years
         self.grid_discount_factors = {} # {t_i: F_i}
