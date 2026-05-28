@@ -1,7 +1,6 @@
 {
-    "curve_name": "Standard_Swap",
-    "trade_date": "17-05-1990",
-    "day_count_convention": "Actual/360",
-    "payment_frequency": 1,
-    "interpolation_method": "cubic_spline"
+    "trade_date": "17-05-1990", 
+    "day_count_convention": "ACT/365",
+    "payment_frequency": 2,
+    "interpolation_method": "Linear"
 }

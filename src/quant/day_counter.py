@@ -35,7 +35,7 @@ def calculate_year_fraction(start_date: datetime.date, end_date: datetime.date, 
         calculated_days = 360 * (y2 - y1) + 30 * (m2 - m1) + (d2 - d1)
         return calculated_days / 360.0
             
-    else:       # ERROR MSG
+    else:
         raise ValueError(f"Unsupported day count convention: {convention}")
 
 
