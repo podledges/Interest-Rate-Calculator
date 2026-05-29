@@ -180,79 +180,79 @@ class FuturesCurveBuilder:
         return schedule
 
     def plot_curve(self, plot_type='zero_rate'):
-        """Plots the yield curve with pseudo-log/custom scaling for uniform tenor spacing."""
+        """Plots the yield curve including the O/N rate with equidistant knot spacing."""
         if not self.discount_factors:
             print("No curve data to display. Execute build_curve() first.")
             return
 
-        times = np.array(sorted(self.discount_factors.keys()))
+        # 1. Gather all nodes, but filter out EXACTLY T=0 to avoid division by zero 
+        all_times = sorted(self.discount_factors.keys())
+        times = np.array([t for t in all_times if t > 0])
         dfs = np.array([self.discount_factors[t] for t in times])
 
-        times_no_zero = times[1:]
-        max_time = times.max()
+        num_knots = len(times)
+        visual_x_knots = np.arange(num_knots)
 
-        short_end_ticks = [1/12, 3/12, 6/12, 9/12, 1.0, 15/12, 18/12, 21/12, 2.0]
-        short_end_labels = ['1M', '3M', '6M', '9M', '1Y', '15M', '18M', '21M', '2Y']
-        
-        long_end_ticks = list(range(3, int(np.ceil(max_time)) + 1))
-        long_end_labels = [f"{y}Y" for y in long_end_ticks]
-        
-        milestone_ticks = np.array(short_end_ticks + long_end_ticks)
-        milestone_labels = short_end_labels + long_end_labels
+        # 2. Dynamic label generator identifying very short tenors cleanly
+        def format_tenor_label(t):
+            days = round(t * 365)
+            months = round(t * 12)
+            if days <= 3:
+                return "O/N"
+            elif months < 1:
+                return f"{days}D"
+            elif months < 24:
+                return f"{months}M"
+            else:
+                years = round(t, 1)
+                return f"{int(years) if years.is_integer() else years}Y"
 
-        # 2. Map coordinates: index positions (0, 1, 2...) will be our visual "x"
-        visual_x_milestones = np.arange(len(milestone_ticks))
+        knot_labels = [format_tenor_label(t) for t in times]
+        visual_x_smooth = np.linspace(0, num_knots - 1, 500)
 
-        # Helper function to map any arbitrary continuous time T into our uniform visual space
-        def transform_to_visual_space(t_array):
-            # Linearly interpolates actual times into the evenly spaced index positions
-            return np.interp(t_array, milestone_ticks, visual_x_milestones)
-
-        # Generate smooth line points directly inside the visual space sequence
-        visual_x_smooth = np.linspace(0, visual_x_milestones[-1], 500)
-        
-        # We must map actual curve times into visual x coordinates for plotting knots
-        visual_x_knots = transform_to_visual_space(times_no_zero)
-
-        plt.figure(figsize=(11, 6))
+        plt.figure(figsize=(12, 6))
 
         if plot_type == 'zero_rate':
-            rates = np.array([
-                0.0 if t == 0 else (-np.log(df) / t) * 100 for t, df in zip(times, dfs)
-            ])
-            rates_no_zero = rates[1:]
+            # Calculate continuous zero rates safely for all points > 0
+            rates = np.array([(-np.log(df) / t) * 100 for t, df in zip(times, dfs)])
 
-            if len(times_no_zero) >= 3:
-                curve = CubicSplineCurve(times_no_zero, rates_no_zero)
-                times_smooth = np.interp(visual_x_smooth, visual_x_milestones, milestone_ticks)
+            if num_knots >= 3:
+                # Spline now explicitly includes your very first O/N data point node
+                curve = CubicSplineCurve(times, rates)
+                times_smooth = np.interp(visual_x_smooth, visual_x_knots, times)
                 rates_smooth = curve.evaluate(times_smooth)
                 plt.plot(visual_x_smooth, rates_smooth, '-', color='b', label='Smoothed Spline Zero Curve')
             else:
-                plt.plot(visual_x_knots, rates_no_zero, '--', color='b', label='Linear Zero Curve')
+                plt.plot(visual_x_knots, rates, '--', color='b', label='Linear Zero Curve')
 
-            plt.scatter(visual_x_knots, rates_no_zero, color='red', zorder=5, label='Bootstrapped Knots')
+            plt.scatter(visual_x_knots, rates, color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Continuous Zero Rate (%)', fontsize=12)
-            plt.title('Zero-Coupon Yield Curve (Scaled Tenors)', fontsize=14, fontweight='bold')
+            plt.title('Zero-Coupon Yield Curve (Equidistant Knot Spacing)', fontsize=14, fontweight='bold')
 
         elif plot_type == 'discount_factor':
-            if len(times_no_zero) >= 3:
-                curve = CubicSplineCurve(times_no_zero, dfs[1:])
-                times_smooth = np.interp(visual_x_smooth, visual_x_milestones, milestone_ticks)
+            if num_knots >= 3:
+                curve = CubicSplineCurve(times, dfs)
+                times_smooth = np.interp(visual_x_smooth, visual_x_knots, times)
                 dfs_smooth = curve.evaluate(times_smooth)
                 plt.plot(visual_x_smooth, dfs_smooth, '-', color='g', label='Smoothed Spline DF Curve')
             else:
-                plt.plot(visual_x_knots, dfs[1:], '--', color='g', label='Linear DF Curve')
+                plt.plot(visual_x_knots, dfs, '--', color='g', label='Linear DF Curve')
 
-            plt.scatter(visual_x_knots, dfs[1:], color='red', zorder=5, label='Bootstrapped Knots')
+            plt.scatter(visual_x_knots, dfs, color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Discount Factor D(0, T)', fontsize=12)
-            plt.title('Discount Factor Curve (Scaled Tenors)', fontsize=14, fontweight='bold')
+            plt.title('Discount Factor Curve (Equidistant Knot Spacing)', fontsize=14, fontweight='bold')
 
-        # 3. Apply the even spacing transformation to the axis
-        plt.xticks(visual_x_milestones, milestone_labels, rotation=45, fontsize=10)
-        plt.xlim(-0.5, visual_x_milestones[-1] + 0.5)
+        # 3. Apply the exact index mapping to the x-axis ticks
+        plt.xticks(visual_x_knots, knot_labels, rotation=45, fontsize=9)
+        plt.xlim(-0.5, num_knots - 0.5)
 
-        plt.xlabel('Tenor', fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.4)
+        # Sub-labels showing exact day count fraction values below the grid lines
+        for x, t in zip(visual_x_knots, times):
+            plt.text(x, plt.gca().get_ylim()[0], f"{t:.4f}", 
+                     rotation=90, va='bottom', ha='center', fontsize=7, alpha=0.4, color='gray')
+
+        plt.xlabel('Market Instrument Maturity Node', fontsize=12, labelpad=15)
+        plt.grid(True, linestyle='--', alpha=0.3)
         plt.legend()
         plt.tight_layout()
         plt.show()
