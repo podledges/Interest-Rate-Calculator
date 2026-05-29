@@ -2,6 +2,8 @@ from quant.day_counter import calculate_year_fraction
 from dateutil.relativedelta import relativedelta
 from cubic_spline import CubicSplineCurve 
 
+from scipy.interpolate import pchip_interpolate
+
 import calendar
 import matplotlib.pyplot as plt
 import datetime
@@ -164,41 +166,6 @@ class FuturesCurveBuilder:
         # 3 Months contract length
         maturity_date = start_date + relativedelta(months=3)
         
-        # PRINT LOG FOR DEBUGGING - Check your terminal output!
-        print(f"Ticker: {ticker} -> Start: {start_date} | Maturity: {maturity_date}")
-        
-        return start_date, maturity_date
-
-    def _NOTparse_future_tenor(self, tenor_str):
-        """
-        Safely parses a ticker like 'SR3M6' or 'SR3Z7' into (start_date, maturity_date).
-        """
-        # Clean up any accidental whitespace
-        tenor_str = tenor_str.strip()
-        
-        month_codes = {'H': 3, 'M': 6, 'U': 9, 'Z': 12}
-        
-        # Explicitly pull from the end of the string to avoid length mismatches
-        month_char = tenor_str[-2]  # Second to last character (e.g., 'M')
-        year_char = tenor_str[-1]   # Very last character (e.g., '6')
-        
-        if month_char not in month_codes:
-            raise ValueError(f"Invalid month character '{month_char}' parsed from ticker '{tenor_str}'")
-            
-        month = month_codes[month_char]
-        year = int(f"202{year_char}") # Infers 2026, 2027, 2028
-
-        def get_third_wednesday(year, month):
-            # Find all weeks that contain a Wednesday in that month
-            cal = calendar.monthcalendar(year, month)
-            # Filter out weeks where Wednesday (index 2) isn't 0
-            wednesdays = [week[calendar.WEDNESDAY] for week in cal if week[calendar.WEDNESDAY] != 0]
-            # Return the third one as a datetime.date object
-            return datetime.date(year, month, wednesdays[2])
-        
-        start_date = get_third_wednesday(year, month)
-        maturity_date = start_date + relativedelta(months=3)
-        
         return start_date, maturity_date
 
     def _generate_forward_schedule(self, maturity_date):
@@ -213,7 +180,7 @@ class FuturesCurveBuilder:
         return schedule
 
     def plot_curve(self, plot_type='zero_rate'):
-        """Plots the yield curve using CubicSplineCurve over verified knots."""
+        """Plots the yield curve with pseudo-log/custom scaling for uniform tenor spacing."""
         if not self.discount_factors:
             print("No curve data to display. Execute build_curve() first.")
             return
@@ -221,42 +188,73 @@ class FuturesCurveBuilder:
         times = np.array(sorted(self.discount_factors.keys()))
         dfs = np.array([self.discount_factors[t] for t in times])
 
-        times_smooth = np.linspace(times.min(), times.max(), 500)
+        times_no_zero = times[1:]
+        max_time = times.max()
 
-        plt.figure(figsize=(10, 6))
+        short_end_ticks = [1/12, 3/12, 6/12, 9/12, 1.0, 15/12, 18/12, 21/12, 2.0]
+        short_end_labels = ['1M', '3M', '6M', '9M', '1Y', '15M', '18M', '21M', '2Y']
+        
+        long_end_ticks = list(range(3, int(np.ceil(max_time)) + 1))
+        long_end_labels = [f"{y}Y" for y in long_end_ticks]
+        
+        milestone_ticks = np.array(short_end_ticks + long_end_ticks)
+        milestone_labels = short_end_labels + long_end_labels
+
+        # 2. Map coordinates: index positions (0, 1, 2...) will be our visual "x"
+        visual_x_milestones = np.arange(len(milestone_ticks))
+
+        # Helper function to map any arbitrary continuous time T into our uniform visual space
+        def transform_to_visual_space(t_array):
+            # Linearly interpolates actual times into the evenly spaced index positions
+            return np.interp(t_array, milestone_ticks, visual_x_milestones)
+
+        # Generate smooth line points directly inside the visual space sequence
+        visual_x_smooth = np.linspace(0, visual_x_milestones[-1], 500)
+        
+        # We must map actual curve times into visual x coordinates for plotting knots
+        visual_x_knots = transform_to_visual_space(times_no_zero)
+
+        plt.figure(figsize=(11, 6))
 
         if plot_type == 'zero_rate':
             rates = np.array([
                 0.0 if t == 0 else (-np.log(df) / t) * 100 for t, df in zip(times, dfs)
             ])
+            rates_no_zero = rates[1:]
 
-            if len(times) >= 3:
-                curve = CubicSplineCurve(times, rates)
+            if len(times_no_zero) >= 3:
+                curve = CubicSplineCurve(times_no_zero, rates_no_zero)
+                times_smooth = np.interp(visual_x_smooth, visual_x_milestones, milestone_ticks)
                 rates_smooth = curve.evaluate(times_smooth)
-                plt.plot(times_smooth, rates_smooth, '-', color='b', label='Smoothed Spline Zero Curve')
+                plt.plot(visual_x_smooth, rates_smooth, '-', color='b', label='Smoothed Spline Zero Curve')
             else:
-                plt.plot(times, rates, '--', color='b', label='Linear Zero Curve')
+                plt.plot(visual_x_knots, rates_no_zero, '--', color='b', label='Linear Zero Curve')
 
-            plt.scatter(times, rates, color='red', zorder=5, label='Bootstrapped Knots')
+            plt.scatter(visual_x_knots, rates_no_zero, color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Continuous Zero Rate (%)', fontsize=12)
-            plt.title('Zero-Coupon Yield Curve', fontsize=14, fontweight='bold')
+            plt.title('Zero-Coupon Yield Curve (Scaled Tenors)', fontsize=14, fontweight='bold')
 
         elif plot_type == 'discount_factor':
-            print("ALMOST THERE!")
-            if len(times) >= 3:
-                curve = CubicSplineCurve(times, dfs)
+            if len(times_no_zero) >= 3:
+                curve = CubicSplineCurve(times_no_zero, dfs[1:])
+                times_smooth = np.interp(visual_x_smooth, visual_x_milestones, milestone_ticks)
                 dfs_smooth = curve.evaluate(times_smooth)
-                plt.plot(times_smooth, dfs_smooth, '-', color='g', label='Smoothed Spline DF Curve')
+                plt.plot(visual_x_smooth, dfs_smooth, '-', color='g', label='Smoothed Spline DF Curve')
             else:
-                plt.plot(times, dfs, '--', color='g', label='Linear DF Curve')
+                plt.plot(visual_x_knots, dfs[1:], '--', color='g', label='Linear DF Curve')
 
-            plt.scatter(times, dfs, color='red', zorder=5, label='Bootstrapped Knots')
+            plt.scatter(visual_x_knots, dfs[1:], color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Discount Factor D(0, T)', fontsize=12)
-            plt.title('Discount Factor Curve', fontsize=14, fontweight='bold')
+            plt.title('Discount Factor Curve (Scaled Tenors)', fontsize=14, fontweight='bold')
 
-        plt.xlabel('Time (Years)', fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.7)
+        # 3. Apply the even spacing transformation to the axis
+        plt.xticks(visual_x_milestones, milestone_labels, rotation=45, fontsize=10)
+        plt.xlim(-0.5, visual_x_milestones[-1] + 0.5)
+
+        plt.xlabel('Tenor', fontsize=12)
+        plt.grid(True, linestyle='--', alpha=0.4)
         plt.legend()
+        plt.tight_layout()
         plt.show()
 
     def print_discount_factors(self):

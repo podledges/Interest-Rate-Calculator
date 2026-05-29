@@ -184,13 +184,21 @@ class CurveBuilder:
             print("No curve data to display. Execute build_swap_curve() first.")
             return
 
+        # Extract all data points first
         times = np.array([pt['time_in_years'] for pt in self.discount_factors])
+        
+        # Exclude the first point from the data used for plotting and fitting
+        if len(times) <= 1:
+            print("Not enough data points to plot after excluding the first point.")
+            return
+            
+        times = times[1:]
         times_smooth = np.linspace(times.min(), times.max(), 500)
 
         plt.figure(figsize=(10, 6))
 
         if plot_type == 'zero_rate':
-            rates = np.array([pt['zero_rate'] * 100 for pt in self.discount_factors]) # Convert to %
+            rates = np.array([pt['zero_rate'] * 100 for pt in self.discount_factors])[1:] # Convert to % and exclude 1st point
 
             if len(times) >= 3:
                 curve = CubicSplineCurve(times, rates)
@@ -199,13 +207,12 @@ class CurveBuilder:
             else:
                 plt.plot(times, rates, '--', color='b', label='Linear Zero Curve')
 
-            # Fixed: Moved outside the if/else check block
             plt.scatter(times, rates, color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Continuous Zero Rate (%)', fontsize=12)
             plt.title('Zero-Coupon Yield Curve (Cubic Spline)', fontsize=14, fontweight='bold')
 
         elif plot_type == 'discount_factor':
-            dfs = np.array([pt['discount_factor'] for pt in self.discount_factors])
+            dfs = np.array([pt['discount_factor'] for pt in self.discount_factors])[1:] # Exclude 1st point
 
             if len(times) >= 3:
                 curve = CubicSplineCurve(times, dfs)
@@ -214,7 +221,6 @@ class CurveBuilder:
             else:
                 plt.plot(times, dfs, '--', color='g', label='Linear DF Curve')
 
-            # Fixed: Moved outside the if/else check block
             plt.scatter(times, dfs, color='red', zorder=5, label='Bootstrapped Knots')
             plt.ylabel('Discount Factor D(0, T)', fontsize=12)
             plt.title('Discount Factor Curve', fontsize=14, fontweight='bold')
