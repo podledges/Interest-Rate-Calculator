@@ -36,6 +36,8 @@ class FuturesCurveBuilder:
         self._process_futures()
         self._process_swaps()
 
+        self.print_discount_factors()
+
         return self.discount_factors
     
     def _process_cash_rates(self):
@@ -256,3 +258,25 @@ class FuturesCurveBuilder:
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.legend()
         plt.show()
+
+    def print_discount_factors(self):
+        """Prints a beautifully formatted table of calculated discount factors and zero rates."""
+        print("\n" + "="*50)
+        print(f" DEBUG: BOOTSTRAPPED CURVE NODES (Trade Date: {self.trade_date})")
+        print("="*50)
+        print(f"{'Time (T)':<12} | {'Discount Factor':<18} | {'Implied Zero Rate (%)':<22}")
+        print("-"*50)
+        
+        # Sort by time node to ensure chronological order in the console
+        for t in sorted(self.discount_factors.keys()):
+            df = self.discount_factors[t]
+            
+            # Continuous zero rate calculation: R = -ln(DF) / T
+            if t == 0.0:
+                zero_rate_pct = 0.0
+            else:
+                zero_rate_pct = (-np.log(df) / t) * 100.0
+                
+            print(f"{t:<12.4f} | {df:<18.6f} | {zero_rate_pct:<22.4f}%")
+            
+        print("="*50 + "\n")

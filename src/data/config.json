@@ -1,6 +1,6 @@
 {
     "trade_date": "28-05-2026", 
     "day_count_convention": "ACT/365",
-    "payment_frequency": 2,
+    "payment_frequency": 1,
     "interpolation_method": "Linear"
 }

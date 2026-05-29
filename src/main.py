@@ -52,7 +52,6 @@ def run_curve_pipeline(with_futures = False):
 
     print("Generating plot...")
     builder.plot_curve()
-
     return discount_factors
 
 if __name__ == "__main__":
