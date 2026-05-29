@@ -17,70 +17,44 @@ from futures_curve_builder import FuturesCurveBuilder
 
 def main():
     print("=== SWAP CALCULATOR QUICK-TEST SANDBOX ===\n")
-    
-    # ---------------------------------------------------------
-    #                 CONFIGURE ME
-    # ---------------------------------------------------------
-    
 
     # Ensure Python can find your 'src' directory
     sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-    # Import your custom classes
-    # Adjust the import paths if your fi
-
-def run_curve_pipeline():
+def run_curve_pipeline(with_futures = False):
     print("--- Starting Yield Curve Pipeline ---")
     
-    # 1. Initialize the Parser
-    # Update these paths if your csv/json are stored in a different folder
-    parser = DataParser(data_path="src/data/data.csv", config_path="src/data/config.json")
+    parser = DataParser(data_path="src/data/real-data.csv", config_path="src/data/config.json")
     
-    # 2. Load the Data
     parser.load_configuration()
     parser.load_market_data()
     
-    # Safety check before proceeding
     if parser.curve_data.empty or not parser.settings:
         print("Error: Pipeline halted due to missing data or configuration.")
         return
-
-    print("\n--- Initializing Curve Builder ---")
-    # 3. Instantiate the Builder using the parsed data
-    builder = CurveBuilder(market_data_df=parser.curve_data, config=parser.settings)
     
-    # 4. Execute the mathematical bootstrapping
+    market_data = parser.curve_data
+    config = parser.settings
+    
+    if with_futures:
+        print("\n--- Initializing Curve Builder (with Futures) ---")
+        builder = FuturesCurveBuilder(market_data, config)
+    else:
+        print("\n--- Initializing Curve Builder ---")
+        builder = CurveBuilder(market_data, config)
+        
     try:
-        builder.build_swap_curve()
-        print("Bootstrapping complete. Zero rates calculated successfully.")
+        builder.build_curve()
+        discount_factors = builder.build_curve()
     except Exception as e:
         print(f"Error during bootstrapping: {e}")
         return
-        
-    # 5. Visualize the result
+
     print("Generating plot...")
     builder.plot_curve()
 
-def run_curve_builder_w_futures(market_data, config, plot_type='zero_rate'):
-    """
-    Initializes the FuturesCurveBuilder, calculates the discount factors, 
-    and generates the requested plot.
-    """
-    # 1. Instantiate the builder
-    builder = FuturesCurveBuilder(market_data, config)
-
-    # 2. Build the math (calculates the points)
-    discount_factors = builder.build_curve()
-    
-    # 3. Plot the results (renders the visual)
-    builder.plot_curve(plot_type=plot_type)
-    
-    # Optional: Return the calculated data if you need to use it elsewhere in your script
     return discount_factors
 
 if __name__ == "__main__":
-    run_curve_pipeline()
-    # run_curve_builder_w_futures()     -- MIGHT OR MIGHT NOT WORK
-
-# if __name__ == "__main__":
-#     main()
+    run_curve_pipeline(True)
+    # run_curve_builder_w_futures()

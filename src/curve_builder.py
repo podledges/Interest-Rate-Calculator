@@ -19,7 +19,7 @@ class CurveBuilder:
         self.zero_rates = {0.0: 0.0} 
         self.discount_factors = [] 
 
-    def build_swap_curve(self):
+    def build_curve(self):
         """Builds the curve using analytical semi-annual bootstrap (Eq 6.22)
 
         and linear par-rate interpolation for intermediate grid nodes.
